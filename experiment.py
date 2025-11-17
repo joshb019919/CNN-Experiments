@@ -28,10 +28,10 @@ def run_experiment(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print("Using device:", device)
 
-    train_loader, test_loader = get_dataloaders(root=args.data_root,
-                                               subset_train_samples=args.subset_train_samples,
-                                               batch_size=args.batch_size,
-                                               num_workers=args.num_workers)
+    train_loader, val_loader, test_loader = get_dataloaders(root=args.data_root,
+                                                           subset_train_samples=args.subset_train_samples,
+                                                           batch_size=args.batch_size,
+                                                           num_workers=args.num_workers)
 
     # model selection
     if args.model == 'base':
@@ -39,7 +39,7 @@ def run_experiment(args):
         model = BaseNet(convs_per_module=convs, num_classes=10)
         model_name = f'BaseNet-{args.variant}'
     elif args.model == 'resnet':
-        # ResNet-18 analog: 2 blocks per module -> blocks_per_module=2
+        # ResNet-18 analog: 2 blocks per module
         model = ResNetCustom(blocks_per_module=2, num_classes=10)
         model_name = 'ResNet-18'
     else:
@@ -55,9 +55,10 @@ def run_experiment(args):
         optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
     else:
         raise ValueError("unknown optimizer")
-
-    # Scheduler: divide LR by 10 every 30 epochs
-    # (if epochs <= 30, scheduler will only step after epoch 30)
+    
+    # Scheduler: divide LR by 10 every 30 epochs. Note: the assignment's
+    # maximum is 30 epochs, so with the default setting the scheduler will
+    # not change the LR during a 30-epoch run (milestone hits after epoch 30).
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[30, 60, 90], gamma=0.1)
 
     history = {'train_loss': [], 'val_loss': [], 'train_acc': [], 'val_acc': []}
@@ -68,7 +69,8 @@ def run_experiment(args):
     for epoch in range(1, args.epochs + 1):
         print(f"Epoch {epoch}/{args.epochs} - lr: {optimizer.param_groups[0]['lr']:.4f}")
         train_loss, train_acc = train_one_epoch(model, device, train_loader, optimizer, criterion)
-        val_loss, val_acc = validate(model, device, test_loader, criterion)
+        # validate on the held-out validation split (80/20 split of training data)
+        val_loss, val_acc = validate(model, device, val_loader, criterion)
         scheduler.step()
 
         history['train_loss'].append(train_loss)
@@ -95,6 +97,19 @@ def run_experiment(args):
     final_path = os.path.join(save_dir, f'{model_name}_{args.optimizer}_final.pth')
     torch.save({'model_state': model.state_dict()}, final_path)
     print("Saved final model:", final_path)
+
+    # Evaluate on the true test set and report
+    test_loss, test_acc = validate(model, device, test_loader, criterion)
+    print(f" Test  loss: {test_loss:.4f}  acc: {test_acc:.2f}%")
+
+    # Save test metrics to a small text file
+    with open(os.path.join(save_dir, f'{model_name}_{args.optimizer}_test.txt'), 'w') as fh:
+        fh.write(f'test_loss: {test_loss:.6f}\n')
+        fh.write(f'test_acc: {test_acc:.4f}\n')
+
+    # Add test metrics into history so plotting will show them as markers
+    history['test_loss'] = test_loss
+    history['test_acc'] = test_acc
 
     plot_metrics(history, save_dir, f"{model_name}_{args.optimizer}")
 

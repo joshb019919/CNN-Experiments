@@ -10,6 +10,14 @@ def plot_metrics(history, out_dir, name_prefix):
     plt.figure()
     plt.plot(epochs, history['train_acc'], label='train_acc')
     plt.plot(epochs, history['val_acc'], label='val_acc')
+    # If test accuracy is provided in history as a scalar, plot it as a marker
+    if 'test_acc' in history:
+        try:
+            test_acc = float(history['test_acc'])
+            test_x = len(history['train_acc']) + 1
+            plt.scatter([test_x], [test_acc], c='k', marker='X', label='test_acc')
+        except Exception:
+            pass
     plt.xlabel('Epoch')
     plt.ylabel('Accuracy (%)')
     plt.legend()
@@ -21,6 +29,14 @@ def plot_metrics(history, out_dir, name_prefix):
     plt.figure()
     plt.plot(epochs, history['train_loss'], label='train_loss')
     plt.plot(epochs, history['val_loss'], label='val_loss')
+    # If test loss is provided in history as a scalar, plot it as a marker
+    if 'test_loss' in history:
+        try:
+            test_loss = float(history['test_loss'])
+            test_x = len(history['train_loss']) + 1
+            plt.scatter([test_x], [test_loss], c='k', marker='X', label='test_loss')
+        except Exception:
+            pass
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.legend()

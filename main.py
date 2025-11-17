@@ -43,7 +43,7 @@ def parse_args():
     parser.add_argument('--epochs', type=int, default=30)
     parser.add_argument('--lr', type=float, default=0.1)
     parser.add_argument('--data_root', type=str, default='./data')
-    parser.add_argument('--subset_train_samples', type=int, default=10000)
+    parser.add_argument('--subset_train_samples', type=int, default=40000)
     parser.add_argument('--save_dir', type=str, default='./runs')
     parser.add_argument('--num_workers', type=int, default=4)
     parser.add_argument('--seed', type=int, default=42)
@@ -51,12 +51,10 @@ def parse_args():
 
 
 def main():
-    models = ["base", "resnet"]
-    optimizers = ["sgd", "adam"]
-    variants = [10, 16]
-
-
     args = parse_args()
+
+    print("Dataset Split: 80/20 (40K train/10K test)\nBatch Size: 50\nEpochs: 30")
+
     run_experiment(args)
 
 

@@ -13,8 +13,14 @@ def set_seed(seed=42):
 
 def he_init(module):
     """Apply He initialization to Conv layers."""
+    # Convolutional layers
     if isinstance(module, nn.Conv2d):
         nn.init.kaiming_normal_(module.weight, mode='fan_out', nonlinearity='relu')
+        if module.bias is not None:
+            nn.init.zeros_(module.bias)
+    # Linear layers: apply He init suitable for ReLU
+    elif isinstance(module, nn.Linear):
+        nn.init.kaiming_normal_(module.weight, mode='fan_in', nonlinearity='relu')
         if module.bias is not None:
             nn.init.zeros_(module.bias)
             
